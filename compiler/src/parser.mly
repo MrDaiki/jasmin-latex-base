@@ -498,7 +498,7 @@ prequire:
 | f=from? REQUIRE x=nonempty_list(prequire1) { f, x }
 
 ptypealias:
-| TYPE id=ident EQ t=ptype_r SEMICOLON {(id,t)}
+| TYPE id=ident EQ t=loc(ptype_r) SEMICOLON {Syntax.PTypeAlias (id,t)}
 
 (* -------------------------------------------------------------------- *)
 top:
@@ -507,7 +507,7 @@ top:
 | x=pglobal  { Syntax.PGlobal x }
 | x=pexec    { Syntax.Pexec   x }
 | x=prequire { Syntax.Prequire x}
-  x=ptypealias {Syntax.PTypeAlias x}
+| x=ptypealias {x}
 | NAMESPACE name = ident LBRACE pfs = loc(top)* RBRACE
     { Syntax.PNamespace (name, pfs) }
 (* -------------------------------------------------------------------- *)
