@@ -42,6 +42,7 @@
 %token FN
 %token FOR
 %token FROM
+%token TYPE
 %token <Syntax.sign>GE
 %token GLOBAL
 %token <Syntax.sign>GT
@@ -496,6 +497,9 @@ from:
 prequire:
 | f=from? REQUIRE x=nonempty_list(prequire1) { f, x }
 
+ptypealias:
+| TYPE id=ident EQ t=ptype_r SEMICOLON {(id,t)}
+
 (* -------------------------------------------------------------------- *)
 top:
 | x=pfundef  { Syntax.PFundef x }
@@ -503,6 +507,7 @@ top:
 | x=pglobal  { Syntax.PGlobal x }
 | x=pexec    { Syntax.Pexec   x }
 | x=prequire { Syntax.Prequire x}
+  x=ptypealias {Syntax.PTypeAlias x}
 | NAMESPACE name = ident LBRACE pfs = loc(top)* RBRACE
     { Syntax.PNamespace (name, pfs) }
 (* -------------------------------------------------------------------- *)
