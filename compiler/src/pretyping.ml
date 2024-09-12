@@ -2146,6 +2146,7 @@ let rec tt_item arch_info (env : 'asm Env.env) pt : 'asm Env.env =
      let env = List.fold_left (tt_item arch_info) env items in
      let env = Env.exit_namespace env in
      env
+  | S.PTypeAlias (id,ty) -> env (*TODO : Implement type alias, when a proper semantic will be decided*)
 
 and tt_file_loc arch_info from env fname =
   fst (tt_file arch_info env from (Some (L.loc fname)) (L.unloc fname))
