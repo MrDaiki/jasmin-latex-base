@@ -252,6 +252,10 @@ module Env : sig
     val clear_locals : 'asm env -> 'asm env
   end
 
+  module TypeAlias : sig 
+    val push : 'asm env -> (A.pident * S.ptype) -> 'asm env
+    val get : 'asm env -> A.pident -> S.ptype
+  end
   module Funs : sig
     val push : 'asm env -> (unit, 'asm) P.pfunc -> P.pty list -> 'asm env
     val find : A.symbol -> 'asm env -> ((unit, 'asm) P.pfunc * P.pty list) option
@@ -281,6 +285,7 @@ end  = struct
     e_decls   : (unit, 'asm) P.pmod_item list;
     e_exec    : (P.funname * (Z.t * Z.t) list) L.located list;
     e_loader  : loader;
+    typesalias : (A.pident,S.ptype)Map.t ;
     e_declared : P.Spv.t ref; (* Set of local variables declared somewhere in the function *)
     e_reserved : Ss.t;     (* Set of string (variable name) declared by the user, 
                               fresh variables introduced by the compiler 
@@ -302,6 +307,7 @@ end  = struct
     ; e_decls   = []
     ; e_exec    = []
     ; e_loader  = empty_loader
+    ; typesalias = Map.empty
     ; e_declared = ref P.Spv.empty
     ; e_reserved = Ss.empty
     ; e_known_implicits = [];
@@ -421,6 +427,7 @@ end  = struct
        | r -> r
 
   (* Local variables *)
+  
 
   module Vars = struct
 
@@ -477,6 +484,14 @@ end  = struct
     let clear_locals (env : 'asm env) = 
       { env with e_declared = ref P.Spv.empty } 
 
+  end
+
+  module TypeAlias = struct 
+    let push (env:'asm env) (typea:(A.pident * S.ptype)) : 'asm env = env
+
+    let get  (env: 'asm env) (id:A.pident) : S.ptype = 
+      let typea = Map.find id env.typesalias in 
+      typea
   end
 
   module Funs = struct
