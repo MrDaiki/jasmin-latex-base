@@ -185,15 +185,18 @@ and pp_mem_access fmt (al, ty,x,e) =
     | Some (`Add, e) -> Format.fprintf fmt " + %a" pp_expr e 
     | Some (`Sub, e) -> Format.fprintf fmt " - %a" pp_expr e in
   F.fprintf fmt "%a[%a%a%a]" (pp_opt (pp_paren pp_ws)) ty pp_aligned al pp_var x pp_e e
+
   
 and pp_type fmt ty =
   match L.unloc ty with
   | TBool -> F.fprintf fmt "%a" ptype "bool"
   | TInt -> F.fprintf fmt "%a" ptype "int"
-  | TWord w -> pp_ws fmt w
-  | TArray (w, e) -> F.fprintf fmt "%a[%a]" ptype (string_of_wsize w) pp_expr e
+  | TWord w -> F.fprintf fmt "%s" (string_of_wsize w)
+  | TArray (w, e) -> F.fprintf fmt "%a[%a]" ptype (Syntax.string_of_sizetype w) pp_expr e
+  | TAlias id -> F.fprintf fmt "%s" (L.unloc id)
 
 and pp_ws fmt w = F.fprintf fmt "%a" ptype (string_of_wsize w)
+
 and pp_expr fmt e = pp_expr_rec Pmin fmt e
 
 and pp_arr_access fmt al aa ws x e len=
