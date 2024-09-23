@@ -175,6 +175,7 @@ let pp_tyerror fmt (code : tyerror) =
       F.fprintf fmt 
       "Type %S (ie: %a) is not allowed as array element. Only machine words (uXX...) allowed"
       id Printer.pp_ptype typ
+
   | EqOpWithNoLValue ->
       F.fprintf fmt
         "operator-assign requires a lvalue"
@@ -270,8 +271,11 @@ module Env : sig
   end
 
   module TypeAlias : sig 
+
     val push : 'asm env -> A.pident -> P.pty -> 'asm env
     val get : 'asm env -> A.pident -> (L.t * P.pty)
+
+    val get_opt : 'asm env -> A.pident -> (L.t * P.pty) option
   end
   module Funs : sig
     val push : 'asm env -> (unit, 'asm) P.pfunc -> P.pty list -> 'asm env
@@ -504,6 +508,7 @@ end  = struct
   end
 
   module TypeAlias = struct 
+
     let push (env:'asm env) (id:A.pident) (ty:P.pty) : 'asm env = 
       let contains = Map.find_opt (L.unloc id) env.typesalias in 
       match contains with 
@@ -520,6 +525,10 @@ end  = struct
       | None -> 
         rs_tyerror  ~loc:(L.loc id) (TypeNotFound (L.unloc id))
       | Some e -> e
+
+    let get_opt (env: 'asm env) (id:A.pident) : (L.t * P.pty) option = 
+        Map.find_opt (L.unloc id) env.typesalias
+        
   end
 
   module Funs = struct
@@ -1989,11 +1998,36 @@ let tt_call_conv loc params returns cc =
 
 (* -------------------------------------------------------------------- *)
 
-let process_f_annot loc funname f_cc annot =
+
+let rec unroll_annotations (annots:A.annotations) (env):A.annotations =
+  let unroll_annot_type (annot:A.annotation) = 
+    let id,att = annot in 
+    match att with
+    | None -> annot 
+    | Some annot_v ->
+      match L.unloc annot_v with 
+      | Aid s -> 
+        begin
+        let opt = Env.TypeAlias.get_opt env (L.mk_loc (L.loc annot_v) s) in 
+        match opt with 
+        | None -> annot
+        | Some (_,ty) -> 
+          begin
+            match ty with
+            | P.Bty (P.U ws) -> (id, Some (L.mk_loc (L.loc annot_v) (A.Aws ws)))
+            | _ -> annot
+          end
+        end
+      | Astruct annotations -> let annotations = unroll_annotations annotations env in 
+                (id,Some ((L.mk_loc (L.loc annot_v) (A.Astruct annotations))))
+      | _ -> annot
+
+  in List.map unroll_annot_type annots
+
+let process_f_annot loc funname f_cc annot env =
   let open FInfo in
-
   let mk_ra = Annot.filter_string_list None ["stack", OnStack; "reg", OnReg] in
-
+  let annot = unroll_annotations annot env in
   let retaddr_kind =
     let kind = Annot.ensure_uniq1 "returnaddress" mk_ra annot in
     if kind <> None && not (FInfo.is_subroutine f_cc) then
@@ -2119,7 +2153,7 @@ let tt_fundef arch_info (env0 : 'asm Env.env) loc (pf : S.pfundef) : 'asm Env.en
   let name = L.unloc pf.pdf_name in
   let fdef =
     { P.f_loc   = loc;
-      P.f_annot = process_f_annot loc name f_cc pf.pdf_annot;
+      P.f_annot = process_f_annot loc name f_cc pf.pdf_annot env;
       P.f_cc    = f_cc;
       P.f_name  = P.F.mk name;
       P.f_tyin  = List.map (fun { P.v_ty } -> v_ty) args;
