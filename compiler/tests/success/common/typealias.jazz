@@ -1,0 +1,9 @@
+
+
+type data = u32;
+
+export fn test() -> reg data {
+    reg data x;
+    x = 1;
+    return x;
+}
