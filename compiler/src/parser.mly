@@ -136,7 +136,7 @@ simple_attribute:
   | id=NID         { Aid id    }
   | s=STRING       { Astring s }
   | s=keyword      { Astring s }
-  | ws=utype_p       { Aws ws    }
+  | ws=utype       { Aws ws    }
 
 attribute:
   | EQ ap=loc(simple_attribute) { ap }
@@ -159,7 +159,7 @@ annotations:
 (* ** Type expressions
  * -------------------------------------------------------------------- *)
 
-utype_p:
+utype:
 | T_U8   { Wsize.U8   }
 | T_U16  { Wsize.U16  }
 | T_U32  { Wsize.U32  }
@@ -167,8 +167,8 @@ utype_p:
 | T_U128 { Wsize.U128 }
 | T_U256 { Wsize.U256 }
 
-utype:
-| ws=utype_p {TypeWsize ws}
+utype_array:
+| ws=utype {TypeWsize ws}
 | id=ident {TypeSizeAlias id}
 
 ptype_r:
@@ -178,10 +178,10 @@ ptype_r:
 | T_INT
     { TInt }
 
-| ut=utype_p
+| ut=utype
     { TWord ut }
 
-| ut=utype d=brackets(pexpr)
+| ut=utype_array d=brackets(pexpr)
     { TArray (ut, d) }
 | x=ident {TAlias x}
 
@@ -245,14 +245,14 @@ prim:
 | UNALIGNED { `Unaligned }
 
 %inline mem_access:
-| ct=parens(utype_p)? LBRACKET al=unaligned? v=var e=mem_ofs? RBRACKET
+| ct=parens(utype)? LBRACKET al=unaligned? v=var e=mem_ofs? RBRACKET
   { al, ct, v, e }
   
 arr_access_len: 
 | COLON e=pexpr { e }
 
 arr_access_i:
-| al=unaligned? ws=utype_p? e=pexpr len=arr_access_len? {ws, e, len, al }
+| al=unaligned? ws=utype? e=pexpr len=arr_access_len? {ws, e, len, al }
 
 arr_access:
  | s=DOT?  i=brackets(arr_access_i) {
