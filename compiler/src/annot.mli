@@ -9,6 +9,7 @@ val on_attribute :
   ?on_string:(Location.t -> 'a -> string -> 'b) ->
   ?on_ws:(Location.t -> 'a -> Annotations.wsize -> 'b) ->
   ?on_struct:(Location.t -> 'a -> Annotations.annotations -> 'b) ->
+  ?on_type_alias:(Location.t -> 'a -> Annotations.typealias -> 'b) ->
   (Location.t -> 'a -> 'b) ->
   'a Location.located * Annotations.simple_attribute Location.located option ->
   'b

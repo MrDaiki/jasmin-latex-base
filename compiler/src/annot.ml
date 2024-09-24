@@ -7,7 +7,7 @@ exception AnnotationError of Location.t * (Format.formatter -> unit)
 
 let error ~loc = Format.kdprintf (fun msg -> raise (AnnotationError (loc, msg)))
 
-let on_attribute ?on_empty ?on_int ?on_id ?on_string ?on_ws ?on_struct error
+let on_attribute ?on_empty ?on_int ?on_id ?on_string ?on_ws ?on_struct ?on_type_alias error
     (id, attribute) =
   let nid = L.unloc id in
   let doit loc o arg =
@@ -22,7 +22,9 @@ let on_attribute ?on_empty ?on_int ?on_id ?on_string ?on_ws ?on_struct error
       | A.Aid id -> doit loc on_id id
       | A.Astring s -> doit loc on_string s
       | A.Aws ws -> doit loc on_ws ws
-      | A.Astruct s -> doit loc on_struct s)
+      | A.Astruct s -> doit loc on_struct s
+      | A.ATypeAlias s -> doit loc on_type_alias s
+    )
 
 let pp_dfl_attribute pp fmt dfl =
   match dfl with

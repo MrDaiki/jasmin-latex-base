@@ -34,6 +34,7 @@ type tyerror =
   | DuplicateAlias      of A.symbol * L.t
   | TypeNotFound        of A.symbol
   | InvalidTypeAlias    of A.symbol * P.pty
+  | AnnotationAliasTypeError of A.symbol * P.pty
   | InvalidCast         of P.pty pair
   | InvalidTypeForGlobal of P.pty
   | NotAPointer         of P.plval
@@ -175,6 +176,11 @@ let pp_tyerror fmt (code : tyerror) =
       F.fprintf fmt 
       "Type %S (ie: %a) is not allowed as array element. Only machine words (uXX...) allowed"
       id Printer.pp_ptype typ
+
+  | AnnotationAliasTypeError (id,typ) -> 
+    F.fprintf fmt 
+    "Type %S (ie: %a) is not allowed as annotation type. Only machine words (uXX...) allowed"
+    id Printer.pp_ptype typ
 
   | EqOpWithNoLValue ->
       F.fprintf fmt
@@ -2006,17 +2012,12 @@ let rec unroll_annotations (annots:A.annotations) (env):A.annotations =
     | None -> annot 
     | Some annot_v ->
       match L.unloc annot_v with 
-      | Aid s -> 
+      | ATypeAlias s -> 
         begin
-        let opt = Env.TypeAlias.get_opt env (L.mk_loc (L.loc annot_v) s) in 
-        match opt with 
-        | None -> annot
-        | Some (_,ty) -> 
-          begin
+        let (_,ty) = Env.TypeAlias.get env (L.mk_loc (L.loc annot_v) s) in 
             match ty with
             | P.Bty (P.U ws) -> (id, Some (L.mk_loc (L.loc annot_v) (A.Aws ws)))
-            | _ -> annot
-          end
+            | _ as v -> rs_tyerror ~loc:(L.loc annot_v) (AnnotationAliasTypeError (s,v))
         end
       | Astruct annotations -> let annotations = unroll_annotations annotations env in 
                 (id,Some ((L.mk_loc (L.loc annot_v) (A.Astruct annotations))))

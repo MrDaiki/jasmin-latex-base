@@ -32,5 +32,5 @@ inline fn f(reg u64 p) {
 #stackzero=loop
 export fn main0(reg u64 p) { f(p); }
 
-#stackzero=loop #stackzerosize=arch_size
+#stackzero=loop #stackzerosize=type arch_size
 export fn main1(reg u64 p) { f(p); }

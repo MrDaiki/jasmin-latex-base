@@ -137,6 +137,7 @@ simple_attribute:
   | s=STRING       { Astring s }
   | s=keyword      { Astring s }
   | ws=utype       { Aws ws    }
+  | TYPE id=NID     { ATypeAlias id}
 
 attribute:
   | EQ ap=loc(simple_attribute) { ap }

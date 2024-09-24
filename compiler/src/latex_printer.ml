@@ -130,6 +130,7 @@ let rec pp_simple_attribute fmt a =
   | Aid s | Astring s -> Format.fprintf fmt "%s" s
   | Aws ws -> Format.fprintf fmt "%a" ptype (string_of_wsize ws)
   | Astruct struct_ -> Format.fprintf fmt "(%a)" pp_struct_attribute struct_
+  | ATypeAlias s -> Format.fprintf fmt "type %s" s
 
 and pp_struct_attribute fmt struct_ =
   Format.fprintf fmt "@[<hov 2>%a@]" (pp_list ",@ " pp_annotation) struct_

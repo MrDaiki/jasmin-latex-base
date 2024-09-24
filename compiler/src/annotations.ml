@@ -4,7 +4,7 @@ type pident = symbol Location.located
 
 (* -------------------------------------------------------------------- *)
 type wsize = Wsize.wsize 
-
+type typealias = symbol
 let int_of_ws = function
   | Wsize.U8 -> 8
   | U16  -> 16
@@ -22,6 +22,7 @@ type simple_attribute =
   | Astring of string
   | Aws     of wsize
   | Astruct of annotations
+  | ATypeAlias of symbol
 
 and attribute = simple_attribute Location.located
 
