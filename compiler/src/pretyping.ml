@@ -273,9 +273,9 @@ module Env : sig
   module TypeAlias : sig 
 
     val push : 'asm env -> A.pident -> P.pty -> 'asm env
-    val get : 'asm env -> A.pident -> (L.t * P.pty)
+    val get : 'asm env -> A.pident -> (P.pty L.located)
 
-    val get_opt : 'asm env -> A.pident -> (L.t * P.pty) option
+    val get_opt : 'asm env -> A.pident -> (P.pty L.located) option
   end
   module Funs : sig
     val push : 'asm env -> (unit, 'asm) P.pfunc -> P.pty list -> 'asm env
@@ -306,7 +306,7 @@ end  = struct
     e_decls   : (unit, 'asm) P.pmod_item list;
     e_exec    : (P.funname * (Z.t * Z.t) list) L.located list;
     e_loader  : loader;
-    typesalias : (string, (L.t * P.pty) ) Map.t ;
+    typesalias : ((P.pty L.located) ) Ms.t ;
     e_declared : P.Spv.t ref; (* Set of local variables declared somewhere in the function *)
     e_reserved : Ss.t;     (* Set of string (variable name) declared by the user, 
                               fresh variables introduced by the compiler 
@@ -328,7 +328,7 @@ end  = struct
     ; e_decls   = []
     ; e_exec    = []
     ; e_loader  = empty_loader
-    ; typesalias = Map.empty
+    ; typesalias = Ms.empty
     ; e_declared = ref P.Spv.empty
     ; e_reserved = Ss.empty
     ; e_known_implicits = [];
@@ -510,24 +510,24 @@ end  = struct
   module TypeAlias = struct 
 
     let push (env:'asm env) (id:A.pident) (ty:P.pty) : 'asm env = 
-      let contains = Map.find_opt (L.unloc id) env.typesalias in 
+      let contains = Ms.find_opt (L.unloc id) env.typesalias in 
       match contains with 
       | None -> 
-        let m = Map.add (L.unloc id) ((L.loc id),ty) env.typesalias in
+        let m = Ms.add (L.unloc id) ((L.mk_loc (L.loc id) ty)) env.typesalias in
         let env = {env with typesalias=m} in
         env
-      | Some (loc,alias)->
-        rs_tyerror  ~loc:(L.loc id)  (DuplicateAlias (L.unloc id, loc)) 
+      | Some (alias)->
+        rs_tyerror  ~loc:(L.loc id)  (DuplicateAlias (L.unloc id, (L.loc alias))) 
 
-    let get (env: 'asm env) (id:A.pident) : (L.t * P.pty) = 
-      let typea = Map.find_opt (L.unloc id) env.typesalias in 
+    let get (env: 'asm env) (id:A.pident) : (P.pty L.located) = 
+      let typea = Ms.find_opt (L.unloc id) env.typesalias in 
       match typea with 
       | None -> 
         rs_tyerror  ~loc:(L.loc id) (TypeNotFound (L.unloc id))
       | Some e -> e
 
-    let get_opt (env: 'asm env) (id:A.pident) : (L.t * P.pty) option = 
-        Map.find_opt (L.unloc id) env.typesalias
+    let get_opt (env: 'asm env) (id:A.pident) : (P.pty L.located) option = 
+        Ms.find_opt (L.unloc id) env.typesalias
         
   end
 
@@ -1227,15 +1227,15 @@ and tt_type pd (env : 'asm Env.env) (pty : S.ptype) : P.pty =
     match ws with 
     |TypeSizeAlias id -> 
       begin 
-        let loc,extern_type = Env.TypeAlias.get env id in 
-        match extern_type with
+        let extern_type = Env.TypeAlias.get env id in 
+        match L.unloc extern_type with
         | P.Bty (P.U ws) -> P.Arr (ws, fst (tt_expr ~mode:`OnlyParam pd env e))
         | ty -> rs_tyerror  ~loc:(L.loc id) (InvalidTypeAlias ((L.unloc id),ty))
       end
     |TypeWsize ws -> P.Arr (ws, fst (tt_expr ~mode:`OnlyParam pd env e))
     end
   | S.TAlias id -> 
-    let _,typ = (Env.TypeAlias.get env id) in typ
+    let typ = (Env.TypeAlias.get env id) in L.unloc typ
 
 (* -------------------------------------------------------------------- *)
 let tt_exprs pd (env : 'asm Env.env) es = List.map (tt_expr ~mode:`AllVar pd env) es
@@ -2032,9 +2032,9 @@ let rec unroll_annotations (annots:A.annotations) (env):A.annotations =
         let opt = Env.TypeAlias.get_opt env (L.mk_loc (L.loc annot_v) s) in 
         match opt with 
         | None -> annot
-        | Some (_,ty) -> 
+        | Some ty -> 
           begin
-            match ty with
+            match L.unloc ty with
             | P.Bty (P.U ws) -> (id, Some (L.mk_loc (L.loc annot_v) (A.Aws ws)))
             | _ -> annot
           end
@@ -2250,16 +2250,16 @@ let tt_typealias arch_info env id ty =
       | TypeWsize ws -> P.Arr (arch_info.pd, fst (tt_expr ~mode:`OnlyParam ws env e))
       |TypeSizeAlias alias -> 
         begin
-        let loc,talias = Env.TypeAlias.get env alias in 
-        match talias with 
+        let talias = Env.TypeAlias.get env alias in 
+        match L.unloc talias with 
         | P.Bty (P.U ws) -> P.Arr (arch_info.pd, fst (tt_expr ~mode:`OnlyParam ws env e))
-        | _ -> rs_tyerror  ~loc:(L.loc id) (InvalidTypeAlias ((L.unloc id),talias))
+        | _ -> rs_tyerror  ~loc:(L.loc id) (InvalidTypeAlias ((L.unloc id), L.unloc talias))
         end 
       in Env.TypeAlias.push env id arr
     end
   | S.TAlias alias_id -> 
-    let _,talias = Env.TypeAlias.get env alias_id in 
-    Env.TypeAlias.push env id talias
+    let talias = Env.TypeAlias.get env alias_id in 
+    Env.TypeAlias.push env id (L.unloc talias)
   
 (* -------------------------------------------------------------------- *)
 let rec tt_item arch_info (env : 'asm Env.env) pt : 'asm Env.env =
@@ -2279,7 +2279,7 @@ let rec tt_item arch_info (env : 'asm Env.env) pt : 'asm Env.env =
      let env = List.fold_left (tt_item arch_info) env items in
      let env = Env.exit_namespace env in
      env
-  | S.PTypeAlias (id,ty) -> tt_typealias arch_info env id ty (*TODO : Implement type alias, when a proper semantic will be decided*)
+  | S.PTypeAlias (id,ty) -> tt_typealias arch_info env id ty
 
 and tt_file_loc arch_info from env fname =
   fst (tt_file arch_info env from (Some (L.loc fname)) (L.unloc fname))

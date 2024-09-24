@@ -422,8 +422,8 @@ let pp_global fmt { pgd_type ; pgd_name ; pgd_val } =
 let pp_path fmt s =
   F.fprintf fmt "%S " (L.unloc s)
 
-let pp_type_alias fmt (id,ty) =
-  F.fprintf fmt ""
+let pp_typealias fmt id ty =
+  F.fprintf fmt "type %s = %a;" (L.unloc id) pp_type ty
 
 let rec pp_pitem fmt pi =
   match L.unloc pi with
@@ -446,7 +446,7 @@ let rec pp_pitem fmt pi =
      F.fprintf fmt eol;
      closebrace fmt ();
      F.fprintf fmt eol
-  | PTypeAlias (id,ty) -> () (**)
+  | PTypeAlias (id,ty) -> pp_typealias fmt id ty (**)
 
 let pp_prog fmt =
   F.pp_print_list ~pp_sep:(fun fmt () -> F.fprintf fmt eol) pp_pitem fmt
