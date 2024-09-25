@@ -297,6 +297,7 @@ end  = struct
     } 
 
   type 'asm global_bindings = {
+      gb_types : (A.symbol, P.pty L.located) Map.t;
       gb_vars : (A.symbol, P.pvar * E.v_scope) Map.t;
       gb_funs : (A.symbol, (unit, 'asm) P.pfunc * P.pty list) Map.t;
     }
@@ -306,7 +307,6 @@ end  = struct
     e_decls   : (unit, 'asm) P.pmod_item list;
     e_exec    : (P.funname * (Z.t * Z.t) list) L.located list;
     e_loader  : loader;
-    typesalias : ((P.pty L.located) ) Ms.t ;
     e_declared : P.Spv.t ref; (* Set of local variables declared somewhere in the function *)
     e_reserved : Ss.t;     (* Set of string (variable name) declared by the user, 
                               fresh variables introduced by the compiler 
@@ -321,14 +321,13 @@ end  = struct
     ; from = Map.empty
     }
 
-  let empty_gb = { gb_vars = Map.empty ; gb_funs = Map.empty }
+  let empty_gb = { gb_vars = Map.empty ; gb_funs = Map.empty; gb_types = Map.empty }
 
   let empty : 'asm env =
     { e_bindings = [], empty_gb
     ; e_decls   = []
     ; e_exec    = []
     ; e_loader  = empty_loader
-    ; typesalias = Ms.empty
     ; e_declared = ref P.Spv.empty
     ; e_reserved = Ss.empty
     ; e_known_implicits = [];
@@ -352,8 +351,10 @@ end  = struct
         let n = qualify ns n in
         begin match Map.find n dst with
         | exception Not_found -> ()
-        | (k, _) -> on_duplicate n (fst v) k end;
+        | (k) -> on_duplicate n v k end;
         Map.add n v dst)
+
+
 
   let warn_duplicate_var name v v' =
     warning DuplicateVar (L.i_loc0 v.P.v_dloc)
@@ -362,10 +363,31 @@ end  = struct
 
   let err_duplicate_fun name v fd =
     rs_tyerror ~loc:v.P.f_loc (DuplicateFun(name, fd.P.f_loc))
+  
+  let warn_duplicate_var_merge name (v,_) (v',_) =
+    warn_duplicate_var name v v'
+  let err_duplicate_fun_merge name (v,_) (fd,_) =
+    err_duplicate_fun name v fd
+
+  let err_duplicate_type name t1 t2 = 
+    rs_tyerror ~loc:(L.loc t2) (DuplicateAlias (name,L.loc t1))
+
+  let merge_types_bindings ns src dst = 
+    let dst = Map.foldi (fun type_name ty dst -> 
+      let type_name = qualify ns type_name in 
+      begin 
+        match Map.find_opt type_name dst with
+        | None -> ()
+        | Some t2 ->  err_duplicate_type type_name ty t2
+      end;
+      Map.add type_name ty dst 
+    ) src dst in dst
+
 
   let merge_bindings (ns, src) dst =
-    { gb_vars = merge_bindings warn_duplicate_var ns src.gb_vars dst.gb_vars
-    ; gb_funs = merge_bindings err_duplicate_fun ns src.gb_funs dst.gb_funs
+    { gb_vars = merge_bindings warn_duplicate_var_merge ns src.gb_vars dst.gb_vars
+    ; gb_funs = merge_bindings err_duplicate_fun_merge ns src.gb_funs dst.gb_funs
+    ; gb_types = merge_bindings err_duplicate_type ns src.gb_types dst.gb_types
     }
 
   let exit_namespace env =
@@ -509,26 +531,35 @@ end  = struct
 
   module TypeAlias = struct 
 
-    let push (env:'asm env) (id:A.pident) (ty:P.pty) : 'asm env = 
-      let contains = Ms.find_opt (L.unloc id) env.typesalias in 
-      match contains with 
+    let push (env:'asm env) (id:A.pident) (ty:P.pty) : 'asm env =
+      match find (fun x -> x.gb_types) (L.unloc id) env with
       | None -> 
-        let m = Ms.add (L.unloc id) ((L.mk_loc (L.loc id) ty)) env.typesalias in
-        let env = {env with typesalias=m} in
-        env
-      | Some (alias)->
+        begin
+          let ty = L.mk_loc (L.loc id) ty in
+          let doit v = {v with gb_types = Map.add (L.unloc id) ty v.gb_types }
+          in let binds = 
+          match env.e_bindings with 
+          | ([],gb) -> [],doit gb
+          | ((ns,gb):: stack, glob) -> (ns,doit gb):: stack , glob
+          in
+          {env with e_bindings = binds}
+        end 
+      | Some alias ->
         rs_tyerror  ~loc:(L.loc id)  (DuplicateAlias (L.unloc id, (L.loc alias))) 
 
+
     let get (env: 'asm env) (id:A.pident) : (P.pty L.located) = 
-      let typea = Ms.find_opt (L.unloc id) env.typesalias in 
+      let typea = find (fun b -> b.gb_types) (L.unloc id) env in 
       match typea with 
       | None -> 
         rs_tyerror  ~loc:(L.loc id) (TypeNotFound (L.unloc id))
       | Some e -> e
 
     let get_opt (env: 'asm env) (id:A.pident) : (P.pty L.located) option = 
-        Ms.find_opt (L.unloc id) env.typesalias
-        
+      match get env id with 
+      | exception _ -> None 
+      | e -> Some e
+
   end
 
   module Funs = struct

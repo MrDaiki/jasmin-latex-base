@@ -7,3 +7,19 @@ export fn test() -> reg data {
     x = 1;
     return x;
 }
+
+namespace A {
+    type x = u32;
+
+    fn s() -> {
+        reg x test;
+        test += 1;
+    }
+}
+
+fn test2(reg A::x v) -> reg A::x {
+    reg A::x v2;
+    v2 = v;
+    v2+=1;
+    return v2;
+}
