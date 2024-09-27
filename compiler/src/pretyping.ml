@@ -372,18 +372,6 @@ end  = struct
   let err_duplicate_type name t1 t2 = 
     rs_tyerror ~loc:(L.loc t2) (DuplicateAlias (name,L.loc t1))
 
-  let merge_types_bindings ns src dst = 
-    let dst = Map.foldi (fun type_name ty dst -> 
-      let type_name = qualify ns type_name in 
-      begin 
-        match Map.find_opt type_name dst with
-        | None -> ()
-        | Some t2 ->  err_duplicate_type type_name ty t2
-      end;
-      Map.add type_name ty dst 
-    ) src dst in dst
-
-
   let merge_bindings (ns, src) dst =
     { gb_vars = merge_bindings warn_duplicate_var_merge ns src.gb_vars dst.gb_vars
     ; gb_funs = merge_bindings err_duplicate_fun_merge ns src.gb_funs dst.gb_funs
