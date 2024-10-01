@@ -2042,35 +2042,10 @@ let tt_call_conv loc params returns cc =
 (* -------------------------------------------------------------------- *)
 
 
-let rec unroll_annotations (annots:A.annotations) (env):A.annotations =
-  let unroll_annot_type (annot:A.annotation) = 
-    let id,att = annot in 
-    match att with
-    | None -> annot 
-    | Some annot_v ->
-      match L.unloc annot_v with 
-      | Aid s -> 
-        begin
-        let opt = Env.TypeAlias.get_opt env (L.mk_loc (L.loc annot_v) s) in 
-        match opt with 
-        | None -> annot
-        | Some ty -> 
-          begin
-            match L.unloc ty with
-            | P.Bty (P.U ws) -> (id, Some (L.mk_loc (L.loc annot_v) (A.Aws ws)))
-            | _ -> annot
-          end
-        end
-      | Astruct annotations -> let annotations = unroll_annotations annotations env in 
-                (id,Some ((L.mk_loc (L.loc annot_v) (A.Astruct annotations))))
-      | _ -> annot
-
-  in List.map unroll_annot_type annots
 
 let process_f_annot loc funname f_cc annot env =
   let open FInfo in
   let mk_ra = Annot.filter_string_list None ["stack", OnStack; "reg", OnReg] in
-  let annot = unroll_annotations annot env in
   let retaddr_kind =
     let kind = Annot.ensure_uniq1 "returnaddress" mk_ra annot in
     if kind <> None && not (FInfo.is_subroutine f_cc) then
