@@ -31,7 +31,7 @@ type tyerror =
   | InvalidArgCount     of int * int
   | InvalidLvalCount    of int * int
   | DuplicateFun        of A.symbol * L.t
-  | DuplicateAlias      of A.symbol * L.t
+  | DuplicateAlias      of A.symbol * P.pty L.located * P.pty L.located
   | TypeNotFound        of A.symbol
   | InvalidTypeAlias    of A.symbol * P.pty
   | InvalidCast         of P.pty pair
@@ -161,19 +161,22 @@ let pp_tyerror fmt (code : tyerror) =
         "The function %s is already declared at %s"
         f (L.tostring loc)
 
-  | DuplicateAlias (id, loc) ->
+  | DuplicateAlias (id, newtype,oldtype) ->
       F.fprintf fmt 
-        "Type %S is already declared at %s"
-        id (L.tostring loc)
+        "Type '%s' (ie: '%a') is already declared at %s (with type : '%a')"
+        id 
+        Printer.pp_ptype (L.unloc newtype)
+        (L.tostring (L.loc oldtype))
+        Printer.pp_ptype (L.unloc oldtype)
 
   | TypeNotFound (id) -> 
       F.fprintf fmt 
-      "Type %S not found"
+      "Type '%s' not found"
       id
   
   | InvalidTypeAlias (id,typ) -> 
       F.fprintf fmt 
-      "Type %S (ie: %a) is not allowed as array element. Only machine words (uXX...) allowed"
+      "Type '%s' (ie: '%a') is not allowed as array element. Only machine words (u8, u16 ...) allowed"
       id Printer.pp_ptype typ
 
   | EqOpWithNoLValue ->
@@ -370,7 +373,7 @@ end  = struct
     err_duplicate_fun name v fd
 
   let err_duplicate_type name t1 t2 = 
-    rs_tyerror ~loc:(L.loc t2) (DuplicateAlias (name,L.loc t1))
+    rs_tyerror ~loc:(L.loc t2) (DuplicateAlias (name,t1,t2))
 
   let merge_bindings (ns, src) dst =
     { gb_vars = merge_bindings warn_duplicate_var_merge ns src.gb_vars dst.gb_vars
@@ -533,7 +536,7 @@ end  = struct
           {env with e_bindings = binds}
         end 
       | Some alias ->
-        rs_tyerror  ~loc:(L.loc id)  (DuplicateAlias (L.unloc id, (L.loc alias))) 
+        rs_tyerror  ~loc:(L.loc id)  (DuplicateAlias (L.unloc id, (L.mk_loc (L.loc id) ty) ,alias) )
 
 
     let get (env: 'asm env) (id:A.pident) : (P.pty L.located) = 
@@ -2258,27 +2261,8 @@ let tt_global pd (env : 'asm Env.env) _loc (gd: S.pglobal) : 'asm Env.env =
 
 
 let tt_typealias arch_info env id ty = 
-  let ty = L.unloc ty in
-  match ty with 
-  | S.TBool -> Env.TypeAlias.push env id P.tbool
-  | S.TInt -> Env.TypeAlias.push env id P.tint
-  | S.TWord ws -> Env.TypeAlias.push env id (P.Bty (P.U ws))
-  | S.TArray (ws,e)-> 
-    begin
-      let arr = match ws with
-      | TypeWsize ws -> P.Arr (arch_info.pd, fst (tt_expr ~mode:`OnlyParam ws env e))
-      |TypeSizeAlias alias -> 
-        begin
-        let talias = Env.TypeAlias.get env alias in 
-        match L.unloc talias with 
-        | P.Bty (P.U ws) -> P.Arr (arch_info.pd, fst (tt_expr ~mode:`OnlyParam ws env e))
-        | _ -> rs_tyerror  ~loc:(L.loc id) (InvalidTypeAlias ((L.unloc id), L.unloc talias))
-        end 
-      in Env.TypeAlias.push env id arr
-    end
-  | S.TAlias alias_id -> 
-    let talias = Env.TypeAlias.get env alias_id in 
-    Env.TypeAlias.push env id (L.unloc talias)
+  let alias = tt_type arch_info.pd env ty in
+  Env.TypeAlias.push env id alias
   
 (* -------------------------------------------------------------------- *)
 let rec tt_item arch_info (env : 'asm Env.env) pt : 'asm Env.env =
