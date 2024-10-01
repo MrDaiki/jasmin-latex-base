@@ -278,7 +278,6 @@ module Env : sig
     val push : 'asm env -> A.pident -> P.pty -> 'asm env
     val get : 'asm env -> A.pident -> (P.pty L.located)
 
-    val get_opt : 'asm env -> A.pident -> (P.pty L.located) option
   end
   module Funs : sig
     val push : 'asm env -> (unit, 'asm) P.pfunc -> P.pty list -> 'asm env
@@ -545,11 +544,6 @@ end  = struct
       | None -> 
         rs_tyerror  ~loc:(L.loc id) (TypeNotFound (L.unloc id))
       | Some e -> e
-
-    let get_opt (env: 'asm env) (id:A.pident) : (P.pty L.located) option = 
-      match get env id with 
-      | exception _ -> None 
-      | e -> Some e
 
   end
 
