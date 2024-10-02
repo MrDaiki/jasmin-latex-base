@@ -423,7 +423,7 @@ let pp_path fmt s =
   F.fprintf fmt "%S " (L.unloc s)
 
 let pp_typealias fmt id ty =
-  F.fprintf fmt "%a %a = %a;" kw "type" ptype (L.unloc id) pp_type ty
+  F.fprintf fmt "%a %a = %a;" kw "type" dname (L.unloc id) pp_type ty
 
 let rec pp_pitem fmt pi =
   match L.unloc pi with
