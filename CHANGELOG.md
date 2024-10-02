@@ -49,6 +49,11 @@
   ([PR #907](https://github.com/jasmin-lang/jasmin/pull/907);
   fixes [#871](https://github.com/jasmin-lang/jasmin/issues/871)).
 
+- Adding support for type aliases definition in the global scope (and namespace global scope)
+   * Syntax for definition is `type <name> = <type>;`
+   * Syntax for use is `reg <typename> <varname> ...`
+  ([PR #911](https://github.com/jasmin-lang/jasmin/pull/911)).
+
 ## Other changes
 
 - The deprecated legacy interface to the LATEX pretty-printer has been removed
