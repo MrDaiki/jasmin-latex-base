@@ -22,9 +22,3 @@ export fn memncopy
 
     return (target,source);
 }
-
-inline fn f(reg u64 p) {
-    stack u64 s;
-    s = 1;
-    [p] = s;
-}
