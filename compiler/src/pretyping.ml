@@ -1239,19 +1239,15 @@ and tt_type pd (env : 'asm Env.env) (pty : S.ptype) : P.pty =
   | S.TInt      -> P.tint
   | S.TWord  ws -> P.Bty (P.U ws)
   | S.TArray (ws, e) ->
-    begin  
-    match ws with 
-    |TypeSizeAlias id -> 
-      begin 
-        let extern_type = Env.TypeAlias.get env id in 
-        match L.unloc extern_type with
-        | P.Bty (P.U ws) -> P.Arr (ws, fst (tt_expr ~mode:`OnlyParam pd env e))
-        | ty -> rs_tyerror  ~loc:(L.loc id) (InvalidTypeAlias ((L.unloc id),ty))
-      end
-    |TypeWsize ws -> P.Arr (ws, fst (tt_expr ~mode:`OnlyParam pd env e))
-    end
-  | S.TAlias id -> 
-    let typ = (Env.TypeAlias.get env id) in L.unloc typ
+     let ws = match ws with
+       | TypeWsize ws -> ws
+       | TypeSizeAlias id ->
+          let extern_type = Env.TypeAlias.get env id in
+          match L.unloc extern_type with
+          | P.Bty (P.U ws) -> ws
+          | ty -> rs_tyerror  ~loc:(L.loc id) (InvalidTypeAlias ((L.unloc id),ty))
+     in P.Arr (ws, fst (tt_expr ~mode:`OnlyParam pd env e))
+  | S.TAlias id -> L.unloc (Env.TypeAlias.get env id)
 
 (* -------------------------------------------------------------------- *)
 let tt_exprs pd (env : 'asm Env.env) es = List.map (tt_expr ~mode:`AllVar pd env) es
