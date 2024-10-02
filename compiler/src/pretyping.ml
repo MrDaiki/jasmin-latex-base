@@ -2031,9 +2031,7 @@ let tt_call_conv loc params returns cc =
 
 (* -------------------------------------------------------------------- *)
 
-
-
-let process_f_annot loc funname f_cc annot env =
+let process_f_annot loc funname f_cc annot =
   let open FInfo in
   let mk_ra = Annot.filter_string_list None ["stack", OnStack; "reg", OnReg] in
   let retaddr_kind =
@@ -2161,7 +2159,7 @@ let tt_fundef arch_info (env0 : 'asm Env.env) loc (pf : S.pfundef) : 'asm Env.en
   let name = L.unloc pf.pdf_name in
   let fdef =
     { P.f_loc   = loc;
-      P.f_annot = process_f_annot loc name f_cc pf.pdf_annot env;
+      P.f_annot = process_f_annot loc name f_cc pf.pdf_annot;
       P.f_cc    = f_cc;
       P.f_name  = P.F.mk name;
       P.f_tyin  = List.map (fun { P.v_ty } -> v_ty) args;
