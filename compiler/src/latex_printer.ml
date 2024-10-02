@@ -444,8 +444,7 @@ let rec pp_pitem fmt pi =
      F.fprintf fmt eol;
      List.iter (pp_pitem fmt) pis;
      F.fprintf fmt eol;
-     closebrace fmt ();
-     F.fprintf fmt eol
+     closebrace fmt ()
   | PTypeAlias (id,ty) -> pp_typealias fmt id ty (**)
 
 let pp_prog fmt =
