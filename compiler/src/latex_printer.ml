@@ -211,7 +211,7 @@ and pp_type fmt ty =
   | TInt -> F.fprintf fmt "%a" ptype "int"
   | TWord w -> pp_ws fmt w
   | TArray (w, e) -> F.fprintf fmt "%a[%a]" ptype (Syntax.string_of_sizetype w) pp_expr e
-  | TAlias id -> F.fprintf fmt "%s" (L.unloc id)
+  | TAlias id -> F.fprintf fmt "%a" ptype (L.unloc id)
 
 and pp_ws fmt w = F.fprintf fmt "%a" ptype (string_of_wsize w)
 
