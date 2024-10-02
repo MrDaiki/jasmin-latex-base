@@ -353,30 +353,23 @@ end  = struct
         let n = qualify ns n in
         begin match Map.find n dst with
         | exception Not_found -> ()
-        | (k) -> on_duplicate n v k end;
+        | k -> on_duplicate n v k end;
         Map.add n v dst)
 
-
-
-  let warn_duplicate_var name v v' =
+  let warn_duplicate_var name (v, _) (v', _) =
     warning DuplicateVar (L.i_loc0 v.P.v_dloc)
       "the variable %s is already declared at %a"
       name L.pp_loc v'.P.v_dloc
 
-  let err_duplicate_fun name v fd =
+  let err_duplicate_fun name (v, _) (fd, _) =
     rs_tyerror ~loc:v.P.f_loc (DuplicateFun(name, fd.P.f_loc))
-  
-  let warn_duplicate_var_merge name (v,_) (v',_) =
-    warn_duplicate_var name v v'
-  let err_duplicate_fun_merge name (v,_) (fd,_) =
-    err_duplicate_fun name v fd
 
-  let err_duplicate_type name t1 t2 = 
+  let err_duplicate_type name t1 t2 =
     rs_tyerror ~loc:(L.loc t2) (DuplicateAlias (name,t1,t2))
 
   let merge_bindings (ns, src) dst =
-    { gb_vars = merge_bindings warn_duplicate_var_merge ns src.gb_vars dst.gb_vars
-    ; gb_funs = merge_bindings err_duplicate_fun_merge ns src.gb_funs dst.gb_funs
+    { gb_vars = merge_bindings warn_duplicate_var ns src.gb_vars dst.gb_vars
+    ; gb_funs = merge_bindings err_duplicate_fun ns src.gb_funs dst.gb_funs
     ; gb_types = merge_bindings err_duplicate_type ns src.gb_types dst.gb_types
     }
 
@@ -471,7 +464,7 @@ end  = struct
       let name = v.P.v_name in
       match Map.find name map with
       | exception Not_found -> ()
-      | v', _ -> warn_duplicate_var name v v'
+      | v' -> warn_duplicate_var name (v, ()) v'
 
     let push_core (env : 'asm env) (name: P.Name.t) (v : P.pvar) (s : E.v_scope) =
       let doit m =
@@ -566,8 +559,8 @@ end  = struct
               (ns, doit top) :: stack, bot
       in
       { env with e_bindings; e_decls = P.MIfun v :: env.e_decls }
-      | Some (fd,_) ->
-         err_duplicate_fun name v fd
+      | Some fd ->
+         err_duplicate_fun name (v, ()) fd
 
   end
 
