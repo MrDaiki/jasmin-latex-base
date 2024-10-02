@@ -1,6 +1,7 @@
 
 
 type data = u32;
+type data2 = u32[4];
 
 export fn test() -> reg data {
     reg data x;
@@ -17,9 +18,10 @@ namespace A {
     }
 }
 
-fn test2(reg A::x v) -> reg A::x {
+fn test2(reg A::x v, reg data2 y) -> reg A::x {
     reg A::x v2;
     v2 = v;
     v2+=1;
+    y[0] = 1;
     return v2;
 }
