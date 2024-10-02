@@ -241,8 +241,8 @@ and fordir   = [ `Down | `Up ]
 and pinstr = annotations * pinstr_r L.located
 and pblock = pblock_r L.located
 
-let string_of_sizetype st = 
-  match st with 
+let string_of_sizetype =
+  function
   | TypeWsize ws -> string_of_ws ws
   | TypeSizeAlias pident -> L.unloc pident
 

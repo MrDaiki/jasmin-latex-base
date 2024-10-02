@@ -2021,7 +2021,9 @@ let tt_call_conv loc params returns cc =
 
 let process_f_annot loc funname f_cc annot =
   let open FInfo in
+
   let mk_ra = Annot.filter_string_list None ["stack", OnStack; "reg", OnReg] in
+
   let retaddr_kind =
     let kind = Annot.ensure_uniq1 "returnaddress" mk_ra annot in
     if kind <> None && not (FInfo.is_subroutine f_cc) then
