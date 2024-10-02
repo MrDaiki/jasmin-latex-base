@@ -502,10 +502,6 @@ from:
 prequire:
 | f=from? REQUIRE x=nonempty_list(prequire1) { f, x }
 
-
-ptypealias:
-| TYPE id=ident EQ t=ptype SEMICOLON {Syntax.PTypeAlias (id,t)}
-
 (* -------------------------------------------------------------------- *)
 top:
 | x=pfundef  { Syntax.PFundef x }
@@ -513,7 +509,8 @@ top:
 | x=pglobal  { Syntax.PGlobal x }
 | x=pexec    { Syntax.Pexec   x }
 | x=prequire { Syntax.Prequire x}
-| x=ptypealias {x}
+| TYPE name = ident EQ ty = ptype SEMICOLON
+    { Syntax.PTypeAlias (name, ty)}
 | NAMESPACE name = ident LBRACE pfs = loc(top)* RBRACE
     { Syntax.PNamespace (name, pfs) }
 (* -------------------------------------------------------------------- *)

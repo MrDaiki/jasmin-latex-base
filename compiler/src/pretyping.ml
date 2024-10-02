@@ -161,21 +161,21 @@ let pp_tyerror fmt (code : tyerror) =
         "The function %s is already declared at %s"
         f (L.tostring loc)
 
-  | DuplicateAlias (id, newtype,oldtype) ->
-      F.fprintf fmt 
+  | DuplicateAlias (id, newtype, oldtype) ->
+      F.fprintf fmt
         "Type '%s' (ie: '%a') is already declared at %s (with type : '%a')"
-        id 
+        id
         Printer.pp_ptype (L.unloc newtype)
         (L.tostring (L.loc oldtype))
         Printer.pp_ptype (L.unloc oldtype)
 
-  | TypeNotFound (id) -> 
-      F.fprintf fmt 
+  | TypeNotFound (id) ->
+      F.fprintf fmt
       "Type '%s' not found"
       id
-  
-  | InvalidTypeAlias (id,typ) -> 
-      F.fprintf fmt 
+
+  | InvalidTypeAlias (id,typ) ->
+      F.fprintf fmt
       "Type '%s' (ie: '%a') is not allowed as array element. Only machine words (u8, u16 ...) allowed"
       id Printer.pp_ptype typ
 
@@ -273,12 +273,11 @@ module Env : sig
     val clear_locals : 'asm env -> 'asm env
   end
 
-  module TypeAlias : sig 
-
+  module TypeAlias : sig
     val push : 'asm env -> A.pident -> P.pty -> 'asm env
-    val get : 'asm env -> A.pident -> (P.pty L.located)
-
+    val get : 'asm env -> A.pident -> P.pty L.located
   end
+
   module Funs : sig
     val push : 'asm env -> (unit, 'asm) P.pfunc -> P.pty list -> 'asm env
     val find : A.symbol -> 'asm env -> ((unit, 'asm) P.pfunc * P.pty list) option
@@ -453,7 +452,6 @@ end  = struct
        | r -> r
 
   (* Local variables *)
-  
 
   module Vars = struct
 
@@ -512,29 +510,26 @@ end  = struct
 
   end
 
-  module TypeAlias = struct 
+  module TypeAlias = struct
 
-    let push (env:'asm env) (id:A.pident) (ty:P.pty) : 'asm env =
+    let push (env: 'asm env) (id: A.pident) (ty: P.pty) : 'asm env =
       match find (fun x -> x.gb_types) (L.unloc id) env with
-      | None -> 
-        begin
+      | Some alias ->
+         rs_tyerror  ~loc:(L.loc id)  (DuplicateAlias (L.unloc id, (L.mk_loc (L.loc id) ty) ,alias) )
+      | None ->
           let ty = L.mk_loc (L.loc id) ty in
           let doit v = {v with gb_types = Map.add (L.unloc id) ty v.gb_types }
-          in let binds = 
-          match env.e_bindings with 
+          in let binds =
+          match env.e_bindings with
           | ([],gb) -> [],doit gb
           | ((ns,gb):: stack, glob) -> (ns,doit gb):: stack , glob
           in
           {env with e_bindings = binds}
-        end 
-      | Some alias ->
-        rs_tyerror  ~loc:(L.loc id)  (DuplicateAlias (L.unloc id, (L.mk_loc (L.loc id) ty) ,alias) )
 
-
-    let get (env: 'asm env) (id:A.pident) : (P.pty L.located) = 
-      let typea = find (fun b -> b.gb_types) (L.unloc id) env in 
-      match typea with 
-      | None -> 
+    let get (env: 'asm env) (id: A.pident) : P.pty L.located =
+      let typea = find (fun b -> b.gb_types) (L.unloc id) env in
+      match typea with
+      | None ->
         rs_tyerror  ~loc:(L.loc id) (TypeNotFound (L.unloc id))
       | Some e -> e
 
@@ -2216,10 +2211,10 @@ let tt_global pd (env : 'asm Env.env) _loc (gd: S.pglobal) : 'asm Env.env =
   Env.Vars.push_global env (x,d)
 
 
-let tt_typealias arch_info env id ty = 
+let tt_typealias arch_info env id ty =
   let alias = tt_type arch_info.pd env ty in
   Env.TypeAlias.push env id alias
-  
+
 (* -------------------------------------------------------------------- *)
 let rec tt_item arch_info (env : 'asm Env.env) pt : 'asm Env.env =
   match L.unloc pt with
