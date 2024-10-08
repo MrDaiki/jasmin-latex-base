@@ -155,7 +155,7 @@ module W = Wsize
 type pexpr_r =
   | PEParens of pexpr
   | PEVar    of pident
-  | PEGet    of [`Aligned|`Unaligned] option * arr_access * wsize option * pident * pexpr * pexpr option
+  | PEGet    of [`Aligned|`Unaligned] option * arr_access * psizetype option * pident * pexpr * pexpr option
   | PEFetch  of mem_access
   | PEpack   of svsize * pexpr list
   | PEBool   of bool
@@ -169,7 +169,7 @@ type pexpr_r =
 
 and pexpr = pexpr_r L.located
 
-and mem_access = [ `Aligned | `Unaligned ] option * wsize option * pident * ([`Add | `Sub] * pexpr) option
+and mem_access = [ `Aligned | `Unaligned ] option * psizetype option * pident * ([`Add | `Sub] * pexpr) option
 
 (* -------------------------------------------------------------------- *)
 and psizetype = TypeWsize of wsize | TypeSizeAlias of pident
@@ -188,7 +188,7 @@ type annot_pstotype = annotations * pstotype
 type plvalue_r =
   | PLIgnore
   | PLVar   of pident
-  | PLArray of [`Aligned|`Unaligned] option * arr_access * wsize option * pident * pexpr * pexpr option
+  | PLArray of [`Aligned|`Unaligned] option * arr_access * psizetype option * pident * pexpr * pexpr option
   | PLMem   of mem_access 
 
 type plvalue = plvalue_r L.located
@@ -244,7 +244,7 @@ and pblock = pblock_r L.located
 let string_of_sizetype =
   function
   | TypeWsize ws -> string_of_ws ws
-  | TypeSizeAlias pident -> L.unloc pident
+  | TypeSizeAlias pident -> Format.asprintf "%s" (L.unloc pident)
 
 (* -------------------------------------------------------------------- *)
 type pparam = {

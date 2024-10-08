@@ -85,6 +85,7 @@
 %token <string> NID
 %token <Syntax.int_representation> INT
 %token <string> STRING
+%token BACKQUOTE
 %nonassoc COLON QUESTIONMARK
 %left PIPEPIPE
 %left AMPAMP
@@ -109,6 +110,9 @@
 
 %inline ident:
 | x=loc(qident) { x }
+
+%inline typealiascall:
+| x= preceded(BACKQUOTE,ident) {x}
 
 var:
 | x=ident { x }
@@ -170,6 +174,10 @@ utype:
 utype_array:
 | ws=utype {TypeWsize ws}
 | id=ident {TypeSizeAlias id}
+
+utype_cast:
+| ws=utype {TypeWsize ws}
+| id=typealiascall {TypeSizeAlias id}
 
 ptype_r:
 | T_BOOL
@@ -245,14 +253,14 @@ prim:
 | UNALIGNED { `Unaligned }
 
 %inline mem_access:
-| ct=parens(utype)? LBRACKET al=unaligned? v=var e=mem_ofs? RBRACKET
+| ct=parens(utype_cast)? LBRACKET al=unaligned? v=var e=mem_ofs? RBRACKET
   { al, ct, v, e }
   
 arr_access_len: 
 | COLON e=pexpr { e }
 
 arr_access_i:
-| al=unaligned? ws=utype? e=pexpr len=arr_access_len? {ws, e, len, al }
+| al=unaligned? ws=utype_cast? e=pexpr len=arr_access_len? {ws, e, len, al }
 
 arr_access:
  | s=DOT?  i=brackets(arr_access_i) {

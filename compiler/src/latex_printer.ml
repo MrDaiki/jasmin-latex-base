@@ -202,7 +202,7 @@ and pp_mem_access fmt (al, ty,x,e) =
     | None -> ()
     | Some (`Add, e) -> Format.fprintf fmt " + %a" pp_expr e 
     | Some (`Sub, e) -> Format.fprintf fmt " - %a" pp_expr e in
-  F.fprintf fmt "%a[%a%a%a]" (pp_opt (pp_paren pp_ws)) ty pp_aligned al pp_var x pp_e e
+  F.fprintf fmt "%a[%a%a%a]" (pp_opt (pp_paren pp_aliascast)) ty pp_aligned al pp_var x pp_e e
 
 
 and pp_type fmt ty =
@@ -213,8 +213,9 @@ and pp_type fmt ty =
   | TArray (w, e) -> F.fprintf fmt "%a[%a]" ptype (Syntax.string_of_sizetype w) pp_expr e
   | TAlias id -> F.fprintf fmt "%a" ptype (L.unloc id)
 
-and pp_ws fmt w = F.fprintf fmt "%a" ptype (string_of_wsize w)
-
+and pp_ws fmt (w) = F.fprintf fmt "%a" ptype (string_of_wsize w)
+and pp_sizetype fmt s = F.fprintf fmt "%a" ptype (string_of_sizetype s)
+and pp_aliascast fmt s = F.fprintf fmt "`%a" ptype (string_of_sizetype s)
 and pp_expr fmt e = pp_expr_rec Pmin fmt e
 
 and pp_arr_access fmt al aa ws x e len=
@@ -226,7 +227,7 @@ and pp_arr_access fmt al aa ws x e len=
     pp_var x
     (if aa = Warray_.AAdirect then "." else "")
     pp_aligned (Option.bind len (fun _ -> al))
-    (pp_opt pp_ws) ws (pp_opt pp_space) ws pp_expr e pp_olen len
+    (pp_opt pp_aliascast) ws (pp_opt pp_space) ws pp_expr e pp_olen len
 
 let pp_writable = function
   | Some `Constant -> " const"

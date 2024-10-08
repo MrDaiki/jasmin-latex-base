@@ -54,6 +54,7 @@
     "export", EXPORT ;
     "ArrayInit", ARRAYINIT;
     "_"     , UNDERSCORE;
+    "`"    , BACKQUOTE  ;
   ]
 
   let keywords = Hash.of_enum (List.enum _keywords)
@@ -188,9 +189,9 @@ rule main = parse
   | "="  { EQ       }
   | "==" { EQEQ     }
   | "!=" { BANGEQ   }
+  | "`"  { BACKQUOTE    }
   | "#unaligned" { UNALIGNED   }
   | "#aligned" { ALIGNED   }
-
   | _ as c  { invalid_char (L.of_lexbuf lexbuf) c }
   | eof     { EOF }
 

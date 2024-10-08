@@ -33,7 +33,8 @@ type tyerror =
   | DuplicateFun        of A.symbol * L.t
   | DuplicateAlias      of A.symbol * P.pty L.located * P.pty L.located
   | TypeNotFound        of A.symbol
-  | InvalidTypeAlias    of A.symbol * P.pty
+  | InvalidTypeAlias    of A.symbol * P.pty L.located
+  | InvalidCastTypeAlias of A.symbol * P.pty L.located
   | InvalidCast         of P.pty pair
   | InvalidTypeForGlobal of P.pty
   | NotAPointer         of P.plval
@@ -173,11 +174,20 @@ let pp_tyerror fmt (code : tyerror) =
       F.fprintf fmt
       "Type '%s' not found"
       id
-
-  | InvalidTypeAlias (id,typ) ->
-      F.fprintf fmt
-      "Type '%s' (ie: '%a') is not allowed as array element. Only machine words (u8, u16 ...) allowed"
-      id Printer.pp_ptype typ
+  
+  | InvalidTypeAlias (id,typ) -> 
+      F.fprintf fmt 
+      "Type '%s' (ie: '%a' define at '%s') is not allowed as array member. Only machine words (u8, u16 ...) are allowed"
+      id
+      Printer.pp_ptype (L.unloc typ)
+      (L.tostring (L.loc typ))
+  
+  | InvalidCastTypeAlias (id,typ) -> 
+      F.fprintf fmt 
+      "Array element cannot be cast to type '%s' (ie: '%a' define at '%s') . Only machine words (u8, u16 ...) are allowed"
+      id
+      Printer.pp_ptype (L.unloc typ)
+      (L.tostring (L.loc typ))
 
   | EqOpWithNoLValue ->
       F.fprintf fmt
@@ -1087,6 +1097,18 @@ let ignore_align ~loc =
   | Some _al ->
      warning Always (L.i_loc0 loc) "ignored alignment annotation in array slice"
 
+
+let cast_alias_to_ws (env : 'asm Env.env) (st:S.psizetype option) (default): W.wsize = 
+  match st with 
+  | None -> default
+  | Some st -> 
+    match st with 
+    | TypeWsize ws -> ws
+    | TypeSizeAlias ta -> 
+      let aliastype = (Env.TypeAlias.get env ta) in 
+      match L.unloc aliastype with 
+      | P.Bty U ws -> ws
+      | t -> rs_tyerror ~loc:(L.loc ta) (InvalidTypeAlias((L.unloc ta),aliastype))
 (* -------------------------------------------------------------------- *)
 let rec tt_expr pd ?(mode=`AllVar) (env : 'asm Env.env) pe =
   match L.unloc pe with
@@ -1110,7 +1132,7 @@ let rec tt_expr pd ?(mode=`AllVar) (env : 'asm Env.env) pe =
   | S.PEGet (al, aa, ws, ({ L.pl_loc = xlc } as x), pi, olen) ->
     let x, ty = tt_var_global mode env x in
     let ty, _ = tt_as_array (xlc, ty) in
-    let ws = Option.default (P.ws_of_ty ty) ws in
+    let ws = cast_alias_to_ws env ws (P.ws_of_ty ty) in
     let ty = P.tu ws in
     let i,ity  = tt_expr ~mode pd env pi in
     let i = ensure_int (L.loc pi) i ity in
@@ -1216,7 +1238,7 @@ and tt_mem_access pd ?(mode=`AllVar) (env : 'asm Env.env)
       match k with
       | `Add -> e
       | `Sub -> Papp1(E.Oneg (E.Op_w pd), e) in
-  let ct = ct |> Option.default pd in
+  let ct = cast_alias_to_ws env ct pd in
   let al = tt_al AAdirect al in
   (ct,L.mk_loc xlc x,e, al)
 
@@ -1227,14 +1249,14 @@ and tt_type pd (env : 'asm Env.env) (pty : S.ptype) : P.pty =
   | S.TInt      -> P.tint
   | S.TWord  ws -> P.Bty (P.U ws)
   | S.TArray (ws, e) ->
-     let ws = match ws with
-       | TypeWsize ws -> ws
-       | TypeSizeAlias id ->
-          let extern_type = Env.TypeAlias.get env id in
-          match L.unloc extern_type with
-          | P.Bty (P.U ws) -> ws
-          | ty -> rs_tyerror  ~loc:(L.loc id) (InvalidTypeAlias ((L.unloc id),ty))
-     in P.Arr (ws, fst (tt_expr ~mode:`OnlyParam pd env e))
+    let ws = match ws with 
+      |TypeWsize ws -> ws
+      |TypeSizeAlias id -> 
+        let extern_type = Env.TypeAlias.get env id in 
+        match L.unloc extern_type with
+        | P.Bty (P.U ws) -> ws
+        | _ -> rs_tyerror  ~loc:(L.loc id) (InvalidTypeAlias ((L.unloc id),extern_type))
+      in P.Arr (ws, fst (tt_expr ~mode:`OnlyParam pd env e))
   | S.TAlias id -> L.unloc (Env.TypeAlias.get env id)
 
 (* -------------------------------------------------------------------- *)
@@ -1294,7 +1316,7 @@ let tt_lvalue pd (env : 'asm Env.env) { L.pl_desc = pl; L.pl_loc = loc; } =
     let x  = tt_var `NoParam env x in
     reject_constant_pointers xlc x ;
     let ty,_ = tt_as_array (xlc, x.P.v_ty) in
-    let ws = Option.default (P.ws_of_ty ty) ws in
+    let ws = cast_alias_to_ws env ws (P.ws_of_ty ty) in
     let ty = P.tu ws in
     let i,ity  = tt_expr ~mode:`AllVar pd env pi in
     let i = ensure_int (L.loc pi) i ity in
