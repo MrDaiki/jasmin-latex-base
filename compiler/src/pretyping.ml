@@ -1250,8 +1250,8 @@ and tt_type pd (env : 'asm Env.env) (pty : S.ptype) : P.pty =
   | S.TWord  ws -> P.Bty (P.U ws)
   | S.TArray (ws, e) ->
     let ws = match ws with 
-      |TypeWsize ws -> ws
-      |TypeSizeAlias id -> 
+      | TypeWsize ws -> ws
+      | TypeSizeAlias id -> 
         let extern_type = Env.TypeAlias.get env id in 
         match L.unloc extern_type with
         | P.Bty (P.U ws) -> ws

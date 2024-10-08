@@ -112,7 +112,7 @@
 | x=loc(qident) { x }
 
 %inline typealiascall:
-| x= preceded(BACKQUOTE,ident) {x}
+| x=preceded(BACKQUOTE,ident) { x }
 
 var:
 | x=ident { x }
