@@ -204,7 +204,6 @@ and pp_mem_access fmt (al, ty,x,e) =
     | Some (`Sub, e) -> Format.fprintf fmt " - %a" pp_expr e in
   F.fprintf fmt "%a[%a%a%a]" (pp_opt (pp_paren pp_aliascast)) ty pp_aligned al pp_var x pp_e e
 
-
 and pp_type fmt ty =
   match L.unloc ty with
   | TBool -> F.fprintf fmt "%a" ptype "bool"
@@ -213,7 +212,7 @@ and pp_type fmt ty =
   | TArray (w, e) -> F.fprintf fmt "%a[%a]" ptype (Syntax.string_of_sizetype w) pp_expr e
   | TAlias id -> F.fprintf fmt "%a" ptype (L.unloc id)
 
-and pp_ws fmt (w) = F.fprintf fmt "%a" ptype (string_of_wsize w)
+and pp_ws fmt w = F.fprintf fmt "%a" ptype (string_of_wsize w)
 and pp_aliascast fmt s = F.fprintf fmt "`%a" ptype (string_of_sizetype s)
 and pp_expr fmt e = pp_expr_rec Pmin fmt e
 
@@ -445,7 +444,7 @@ let rec pp_pitem fmt pi =
      List.iter (pp_pitem fmt) pis;
      F.fprintf fmt eol;
      closebrace fmt ()
-  | PTypeAlias (id,ty) -> pp_typealias fmt id ty (**)
+  | PTypeAlias (id,ty) -> pp_typealias fmt id ty
 
 let pp_prog fmt =
   F.pp_print_list ~pp_sep:(fun fmt () -> F.fprintf fmt eol) pp_pitem fmt
