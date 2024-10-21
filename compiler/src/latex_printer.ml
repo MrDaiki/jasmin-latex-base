@@ -214,7 +214,6 @@ and pp_type fmt ty =
   | TAlias id -> F.fprintf fmt "%a" ptype (L.unloc id)
 
 and pp_ws fmt (w) = F.fprintf fmt "%a" ptype (string_of_wsize w)
-and pp_sizetype fmt s = F.fprintf fmt "%a" ptype (string_of_sizetype s)
 and pp_aliascast fmt s = F.fprintf fmt "`%a" ptype (string_of_sizetype s)
 and pp_expr fmt e = pp_expr_rec Pmin fmt e
 
